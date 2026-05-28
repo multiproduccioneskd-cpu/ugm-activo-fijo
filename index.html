@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Control de Acceso Estacionamiento - UGM</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f3f4f6;
+            color: #1f2937;
+            padding: 16px;
+            padding-bottom: 60px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #1e3a8a;
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 18pt;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 10pt;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 16px;
+        }
+
+        h2 {
+            font-size: 13pt;
+            margin-bottom: 12px;
+            color: #374151;
+            border-left: 4px solid #1e3a8a;
+            padding-left: 8px;
+        }
+
+        .flow-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14pt;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            text-align: center;
+            color: white;
+        }
+
+        .flow-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-entrada { background-color: #059669; }
+        .btn-entrada:hover { background-color: #047857; }
+        .btn-salida { background-color: #dc2626; }
+        .btn-salida:hover { background-color: #b91c1c; }
+        .btn-secondary { background-color: #4b5563; font-size: 11pt; padding: 12px; }
+
+        /* Contenedor del Lector QR Real */
+        .scanner-container {
+            display: none;
+            text-align: center;
+        }
+
+        /* Contenedor donde la librería incrustará el video de la cámara */
+        #reader {
+            width: 100%;
+            background-color: #111827;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            border: 3px solid #6b7280;
+        }
+
+        /* Alerta de Éxito / Feedback */
+        .result-box {
+            display: none;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-weight: bold;
+            font-size: 10pt;
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .badge-entrada { background-color: #059669; }
+        .badge-salida { background-color: #dc2626; }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 11pt;
+        }
+
+        .data-row span:first-child { color: #6b7280; font-weight: 500; }
+        .data-row span:last-child { color: #111827; font-weight: 600; }
+
+        .log-table-container { max-height: 200px; overflow-y: auto; margin-top: 8px; }
+        .log-item { padding: 10px; border-radius: 6px; background-color: #f9fafb; margin-bottom: 8px; font-size: 9.5pt; border-left: 4px solid #6b7280; }
+        .log-item.ENTRADA { border-left-color: #059669; }
+        .log-item.SALIDA { border-left-color: #dc2626; }
+        .log-meta { display: flex; justify-content: space-between; color: #9ca3af; font-size: 8.5pt; margin-top: 4px; }
+        .clear-btn { background: none; border: none; color: #9ca3af; font-size: 9pt; cursor: pointer; text-decoration: underline; float: right; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Control de Estacionamiento</h1>
+        <p>Visor de Validación - Cámara QR Activa</p>
+    </header>
+
+    <div id="step-mode" class="card">
+        <h2>¿Qué registro deseas realizar?</h2>
+        <button class="flow-btn btn-entrada" onclick="selectMode('ENTRADA')">📥 REGISTRAR ENTRADA</button>
+        <button class="flow-btn btn-salida" onclick="selectMode('SALIDA')">📤 REGISTRAR SALIDA</button>
+    </div>
+
+    <div id="step-scanner" class="card scanner-container">
+        <h2>Escaneando Tarjeta (<span id="current-mode-label"></span>)</h2>
+        <p style="font-size: 9.5pt; color: #6b7280; margin-bottom: 12px;">Apunta al código QR de la credencial</p>
+        
+        <div id="reader"></div>
+        
+        <button class="flow-btn btn-secondary" onclick="stopScanner()">❌ Cancelar y Volver</button>
+    </div>
+
+    <div id="step-result" class="card result-box">
+        <div id="result-badge" class="badge">ENTRADA REGISTRADA</div>
+        <h2>Datos del Vehículo / Funcionario</h2>
+        
+        <div class="data-row"><span>Nombre:</span><span id="res-nombre">-</span></div>
+        <div class="data-row"><span>RUT leído:</span><span id="res-rut">-</span></div>
+        <div class="data-row"><span>Cargo:</span><span id="res-cargo">-</span></div>
+        <div class="data-row"><span>Patente:</span><span id="res-patente">-</span></div>
+        <div class="data-row"><span>Vehículo:</span><span id="res-vehiculo">-</span></div>
+        <div class="data-row"><span>Fecha/Hora:</span><span id="res-hora">-</span></div>
+
+        <button class="flow-btn btn-entrada" style="background-color: #1e3a8a; margin-top: 20px;" onclick="resetFlow()">
+            🔄 Siguiente Vehículo
+        </button>
+    </div>
+
+    <div class="card">
+        <button class="clear-btn" onclick="clearLogs()">Limpiar historial</button>
+        <h2>Últimos movimientos (Guardados local)</h2>
+        <div id="log-table" class="log-table-container">
+            <p style="color: #9ca3af; font-size: 10pt; text-align: center; padding: 10px;">No hay registros en esta sesión.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // BASE DE DATOS FICTICIA PARA EL CRUCE DE DATOS
+    // Para probar la cámara, tus códigos QR deben contener EXACTAMENTE alguno de estos RUTs como texto.
+    // Ej: Crea un QR en internet que diga "11.111.111-1" o "22.222.222-2" para ver la magia.
+    const dbUsuarios = {
+        "11.111.111-1": { nombre: "Felipe Berríos", cargo: "Técnico AV", patente: "AB-CD-12", auto: "Subaru Impreza WRX (Azul)" },
+        "22.222.222-2": { nombre: "Tomás González", cargo: "Docente", patente: "FE-GE-34", auto: "Toyota Yaris (Gris)" },
+        "33.333.333-3": { nombre: "Patricia Angel", cargo: "Directiva", patente: "XY-ZZ-99", auto: "Mazda CX-5 (Rojo)" },
+        "44.444.444-4": { nombre: "Martín Berríos", cargo: "Alumno", patente: "KK-LL-55", auto: "Suzuki Swift (Blanco)" }
+    };
+
+    let selectedMode = ""; 
+    let html5QrcodeScanner = null;
+
+    // Cambiar a pantalla de escáner e iniciar cámara
+    function selectMode(mode) {
+        selectedMode = mode;
+        document.getElementById('current-mode-label').innerText = mode;
+        document.getElementById('step-mode').style.display = 'none';
+        document.getElementById('step-scanner').style.display = 'block';
+        
+        startScanner();
+    }
+
+    // Inicializar la cámara del dispositivo
+    function startScanner() {
+        // Configuramos el lector (cuadro de escaneo, fps, etc)
+        html5QrcodeScanner = new Html5Qrcode("reader");
+        
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 250 },
+            // Prioriza la cámara trasera en celulares
+            aspectRatio: 1.0
+        };
+
+        // Arrancar la cámara trasera
+        html5QrcodeScanner.start(
+            { facingMode: "environment" }, 
+            config,
+            onScanSuccess, // Función si lee el QR con éxito
+            onScanFailure  // Función si no lee nada en el cuadro (opcional)
+        ).catch(err => {
+            alert("Error al abrir la cámara. Asegúrate de dar permisos: " + err);
+            stopScanner();
+        });
+    }
+
+    // ¿Qué pasa cuando detecta un código QR válido?
+    function onScanSuccess(decodedText, decodedResult) {
+        // Detener la cámara inmediatamente para que no siga escaneando en bucle
+        html5QrcodeScanner.stop().then(() => {
+            processScannedData(decodedText.trim());
+        }).catch(err => {
+            console.error("Error al detener la cámara", err);
+            processScannedData(decodedText.trim());
+        });
+    }
+
+    function onScanFailure(error) {
+        // Esta función corre continuamente mientras busca un QR. La dejamos muda para no saturar la consola.
+    }
+
+    // Procesar el texto que venía dentro del QR
+    function processScannedData(textoQR) {
+        // Buscamos si el texto (RUT) existe en nuestra base de datos
+        const infoUsuario = dbUsuarios[textoQR];
+        
+        const ahora = new Date();
+        const horaString = ahora.toLocaleDateString() + ' ' + ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        if (infoUsuario) {
+            // Caso 1: Encontró el RUT en el Excel/DB ficticia
+            document.getElementById('res-nombre').innerText = infoUsuario.nombre;
+            document.getElementById('res-rut').innerText = textoQR;
+            document.getElementById('res-cargo').innerText = infoUsuario.cargo;
+            document.getElementById('res-patente').innerText = infoUsuario.patente;
+            document.getElementById('res-vehiculo').innerText = infoUsuario.auto;
+        } else {
+            // Caso 2: El QR leyó algo pero el RUT no está inscrito en la base de datos de vehículos
+            document.getElementById('res-nombre').innerText = "Desconocido / No registrado";
+            document.getElementById('res-rut').innerText = textoQR;
+            document.getElementById('res-cargo').innerText = "N/A";
+            document.getElementById('res-patente').innerText = "SIN PATENTE REGISTRADA";
+            document.getElementById('res-vehiculo').innerText = "N/A";
+        }
+
+        document.getElementById('res-hora').innerText = horaString;
+
+        // Configurar el color de la tarjeta de éxito
+        const badge = document.getElementById('result-badge');
+        badge.innerText = selectedMode + " REGISTRADA";
+        badge.className = selectedMode === "ENTRADA" ? "badge badge-entrada" : "badge badge-salida";
+
+        // Guardar en el historial visual de abajo
+        saveLog(selectedMode, infoUsuario ? infoUsuario.nombre : "Desconocido ("+textoQR+")", infoUsuario ? infoUsuario.patente : "S/P", horaString);
+
+        // Mostrar pantalla de resultados
+        document.getElementById('step-scanner').style.display = 'none';
+        document.getElementById('step-result').style.display = 'block';
+    }
+
+    // Detener la cámara manualmente si cancela
+    function stopScanner() {
+        if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+            html5QrcodeScanner.stop().then(() => {
+                goBack();
+            }).catch(() => {
+                goBack();
+            });
+        } else {
+            goBack();
+        }
+    }
+
+    function goBack() {
+        document.getElementById('step-scanner').style.display = 'none';
+        document.getElementById('step-mode').style.display = 'block';
+    }
+
+    function resetFlow() {
+        document.getElementById('step-result').style.display = 'none';
+        document.getElementById('step-mode').style.display = 'block';
+    }
+
+    // Historial Local
+    function saveLog(tipo, nombre, patente, hora) {
+        let logs = JSON.parse(localStorage.getItem('parking_logs')) || [];
+        logs.unshift({ tipo, nombre, patente, hora });
+        localStorage.setItem('parking_logs', JSON.stringify(logs));
+        renderLogs();
+    }
+
+    function renderLogs() {
+        const container = document.getElementById('log-table');
+        let logs = JSON.parse(localStorage.getItem('parking_logs')) || [];
+        
+        if (logs.length === 0) {
+            container.innerHTML = '<p style="color: #9ca3af; font-size: 10pt; text-align: center; padding: 10px;">No hay registros en esta sesión.</p>';
+            return;
+        }
+
+        container.innerHTML = logs.map(log => `
+            <div class="log-item ${log.tipo}">
+                <strong>${log.tipo}:</strong> ${log.nombre} — <span style="color:#1e3a8a; font-weight:bold;">${log.patente}</span>
+                <div class="log-meta">
+                    <span>Registro Exitoso</span>
+                    <span>${log.hora}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function clearLogs() {
+        localStorage.removeItem('parking_logs');
+        renderLogs();
+    }
+
+    window.onload = renderLogs;
+</script>
+
+</body>
+</html>
