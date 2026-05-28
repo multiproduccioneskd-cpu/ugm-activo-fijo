@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Inventario y Evidencia - UGM</title>
+    <title>Control de Inventario - UGM</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         :root {
             --bg-dark: #172437; 
             --bg-card: #ffffff;
-            --primary-blue: #1e3d99; 
-            --btn-green: #00a66a;    
+            --primary-blue: #1e3d99; /* Azul de la segunda imagen */
+            --btn-green: #00a66a;    /* Verde del botón de registro */
             --btn-blue: #1e3d99;
-            --accent-line: #1e3d99;  
+            --accent-line: #1e3d99;  /* Barrita lateral azul | */
             --text-muted: #7f8c8d;
         }
 
@@ -52,6 +52,7 @@
             opacity: 0.9;
         }
 
+        /* Las dos únicas tarjetas de la app */
         .card {
             background-color: var(--bg-card);
             border-radius: 16px;
@@ -96,18 +97,19 @@
             align-items: center;
             gap: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
         }
 
         #camera-preview {
             width: 100%;
-            margin-top: 15px;
             border-radius: 10px;
             overflow: hidden;
             border: none !important;
+            margin-bottom: 15px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             display: flex;
             flex-direction: column;
         }
@@ -116,20 +118,26 @@
             font-size: 0.8rem;
             font-weight: bold;
             color: #555;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .form-group input, .form-group select {
-            padding: 12px;
-            border: 1.5px solid var(--primary-blue);
-            border-radius: 8px;
-            font-size: 0.95rem;
-            background-color: #ffffff;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background-color: #f8f9fa;
             color: #333;
             box-sizing: border-box;
         }
 
-        /* Sugerencias del buscador predictivo */
+        /* Resalte para los campos editables */
+        .form-group.editable input, .form-group.editable select {
+            background-color: #ffffff;
+            border: 1.5px solid var(--primary-blue);
+        }
+
+        /* Buscador predictivo */
         .search-container {
             position: relative;
         }
@@ -143,7 +151,7 @@
             border: 1px solid #ccc;
             border-top: none;
             border-radius: 0 0 8px 8px;
-            max-height: 150px;
+            max-height: 140px;
             overflow-y: auto;
             z-index: 1000;
             margin: 0;
@@ -157,6 +165,7 @@
             padding: 10px;
             cursor: pointer;
             font-size: 0.9rem;
+            border-bottom: 1px solid #f1f1f1;
         }
 
         .suggestions-list li:hover {
@@ -171,8 +180,8 @@
 
         .preview-image-container img {
             max-width: 100%;
-            max-height: 180px;
-            border-radius: 8px;
+            max-height: 140px;
+            border-radius: 6px;
             border: 1px dashed var(--primary-blue);
         }
 
@@ -181,12 +190,20 @@
             background-color: var(--btn-blue);
             color: white;
             border: none;
-            padding: 14px;
+            padding: 12px;
             font-size: 1rem;
             font-weight: bold;
             border-radius: 8px;
             cursor: pointer;
+            margin-top: 5px;
             text-transform: uppercase;
+        }
+
+        .status-msg {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 10px 0;
         }
     </style>
 </head>
@@ -200,93 +217,93 @@
         </div>
 
         <div class="card">
-            <h2 class="card-title">Escanear Activo Fijo</h2>
+            <h2 class="card-title">¿Qué registro deseas realizar?</h2>
+            
             <button class="btn-action" id="btn-reader" onclick="toggleScanner()">
-                📷 ESCANEAR CÓDIGO DE BARRAS / QR
+                📷 ESCANEAR CÓDIGO DE ACTIVO
             </button>
+            
             <div id="camera-preview" style="display: none;"></div>
+
+            <div id="scan-placeholder" class="status-msg">
+                Presione el botón para escanear un activo y editar sus datos.
+            </div>
+
+            <form id="edit-asset-form" style="display: none;" onsubmit="handleAssetSubmit(event)">
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+                
+                <div class="form-group">
+                    <label>Código del Activo</label>
+                    <input type="text" id="view-code" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Ítem</label>
+                    <input type="text" id="view-item" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Descripción del Activo Fijo</label>
+                    <input type="text" id="view-description" readonly>
+                </div>
+
+                <div class="form-group editable">
+                    <label>Ubicación Actual ✏️</label>
+                    <input type="text" id="edit-location" required>
+                </div>
+
+                <div class="form-group editable">
+                    <label>Estado del Activo ✏️</label>
+                    <select id="edit-status" required>
+                        <option value="En funcionamiento">En funcionamiento</option>
+                        <option value="Dado de baja">Dado de baja</option>
+                        <option value="En mantención">En mantención</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-submit">💾 Actualizar en SharePoint</button>
+            </form>
         </div>
 
         <div class="card">
             <h2 class="card-title">Cargar Evidencia Fotográfica</h2>
             
-            <form id="photo-flow-form" onsubmit="handlePhotoSubmit(event)">
-                
+            <form id="photo-only-form" onsubmit="handlePhotoSubmit(event)">
                 <div class="form-group search-container">
                     <label>Buscar Código / ID del Activo ✏️</label>
-                    <input type="text" id="search-asset-id" autocomplete="off" placeholder="Escribe el ID (Ej: UGM-2026...)" oninput="filterAssets(this.value)">
+                    <input type="text" id="search-asset-id" autocomplete="off" placeholder="Escribe el ID del activo..." oninput="searchLiveAsset(this.value)" required>
                     <ul id="suggestions-box" class="suggestions-list"></ul>
                 </div>
 
-                <div class="form-group">
-                    <label>Capturar Foto del Activo 📸✏️</label>
-                    <input type="file" id="capture-file" accept="image/*" capture="environment" required onchange="processEvidencePhoto(event)">
+                <div class="form-group editable">
+                    <label>Sacar Foto del Activo 📸✏️</label>
+                    <input type="file" id="photo-file" accept="image/*" capture="environment" onchange="previewPhoto(event)" required>
                     
-                    <div id="evidence-preview-box" class="preview-image-container">
-                        <img id="evidence-preview-img" src="" alt="Previsualización del estado">
+                    <div id="photo-preview-box" class="preview-image-container">
+                        <img id="photo-preview-img" src="" alt="Vista previa">
                     </div>
                 </div>
 
-                <button type="submit" class="btn-submit">💾 Enviar Foto al Activo</button>
+                <button type="submit" class="btn-submit">📤 Enviar Foto al Activo</button>
             </form>
         </div>
 
     </div>
 
     <script>
-        // --- BASE DE DATOS SIMULADA DE SHAREPOINT (Para que el buscador predictivo funcione) ---
-        const activosSharePoint = [
-            { id: "UGM-001", detalle: "HP ProBook G9 - Bodega" },
-            { id: "UGM-002", detalle: "iMac 21.5 (2013) - Sala de Juntas" },
-            { id: "UGM-003", detalle: "Proyector Epson Láser - Sala 3" },
-            { id: "UGM-104", detalle: "Cámara PTZ Logitech - Auditorio" },
-            { id: "UGM-205", detalle: "Consola Allen & Heath - Audio" }
+        // --- BASE DE DATOS LOCAL SIMULADA DE SHAREPOINT ---
+        const listaActivosSharePoint = [
+            { id: "UGM-010", item: "Notebook HP ProBook", desc: "Intel i5 16GB RAM", loc: "Bodega TI", est: "En funcionamiento" },
+            { id: "UGM-025", item: "Proyector Epson Láser", desc: "PowerLite 5200 Lúmenes", loc: "Sala 3", est: "En funcionamiento" },
+            { id: "UGM-033", item: "iMac 21.5-inch", desc: "Core i5 Late 2013 Restoration", loc: "Sala de Juntas", est: "En funcionamiento" },
+            { id: "UGM-104", item: "Cámara PTZ Logitech", desc: "Integración OBS y YouTube", loc: "Auditorio Central", est: "En mantención" }
         ];
 
-        // --- 1. LÓGICA DEL BUSCADOR PREDICTIVO (FILTRADO AL ESCRIBIR) ---
-        function filterAssets(valor) {
-            const lista = document.getElementById('suggestions-box');
-            lista.innerHTML = ''; // Limpiar coincidencias anteriores
-
-            if (!valor) {
-                lista.style.display = 'none';
-                return;
-            }
-
-            // Filtrar los IDs que contengan lo que el usuario va escribiendo
-            const filtrados = activosSharePoint.filter(activo => 
-                activo.id.toLowerCase().includes(valor.toLowerCase())
-            );
-
-            if (filtrados.length > 0) {
-                lista.style.display = 'block';
-                filtrados.forEach(activo => {
-                    const li = document.createElement('li');
-                    li.innerText = `${activo.id} — ${activo.detalle}`;
-                    // Al hacer click en una sugerencia, rellena el campo automáticamente
-                    li.onclick = () => {
-                        document.getElementById('search-asset-id').value = activo.id;
-                        lista.style.display = 'none';
-                    };
-                    lista.appendChild(li);
-                });
-            } else {
-                lista.style.display = 'none';
-            }
-        }
-
-        // Cerrar el buscador predictivo si se hace click fuera
-        document.addEventListener('click', function(e) {
-            if (e.target.id !== 'search-asset-id') {
-                document.getElementById('suggestions-box').style.display = 'none';
-            }
-        });
-
-
-        // --- 2. LÓGICA EXCLUSIVA DEL LECTOR DE BARRAS (TARJETA 1) ---
         let scannerInstance;
         let scanningState = false;
+        let globalBase64Photo = "";
 
+        // --- LÓGICA DEL CONTENEDOR 1: LECTOR Y DESPLIEGUE EN LA MISMA CAJA ---
         function toggleScanner() {
             const previewDiv = document.getElementById('camera-preview');
             const btn = document.getElementById('btn-reader');
@@ -297,15 +314,16 @@
                 btn.style.backgroundColor = "#d32f2f"; 
                 scanningState = true;
 
+                // Ocultar formulario anterior si es que había uno abierto
+                document.getElementById('edit-asset-form').style.display = 'none';
+                document.getElementById('scan-placeholder').style.display = 'block';
+                document.getElementById('scan-placeholder').innerText = "Cámara activa, apunte a un código...";
+
                 scannerInstance = new Html5Qrcode("camera-preview");
                 scannerInstance.start(
                     { facingMode: "environment" }, 
                     { fps: 10, qrbox: { width: 250, height: 150 } },
-                    (text) => {
-                        resetScannerUI();
-                        // Aquí pones la acción al escanear desde este botón dedicado
-                        alert("Código leído por el escáner: " + text);
-                    }
+                    onScanSuccess
                 ).catch(err => {
                     alert("Error al iniciar cámara: " + err);
                     resetScannerUI();
@@ -320,54 +338,116 @@
                 scannerInstance.stop().then(() => {
                     document.getElementById('camera-preview').style.display = 'none';
                     const btn = document.getElementById('btn-reader');
-                    btn.innerText = "📷 ESCANEAR CÓDIGO DE BARRAS / QR";
+                    btn.innerText = "📷 ESCANEAR CÓDIGO DE ACTIVO";
                     btn.style.backgroundColor = "var(--btn-green)";
                     scanningState = false;
                 });
             }
         }
 
+        function onScanSuccess(decodedText) {
+            resetScannerUI();
+            fetchAssetDataInline(decodedText);
+        }
 
-        // --- 3. PROCESAMIENTO DE LA FOTO (TARJETA 2) ---
-        let globalBase64Photo = "";
+        function fetchAssetDataInline(code) {
+            document.getElementById('scan-placeholder').innerText = "Buscando código " + code + " en SharePoint...";
+            
+            setTimeout(() => {
+                const activo = listaActivosSharePoint.find(a => a.id.toLowerCase() === code.toLowerCase()) || {
+                    id: code, item: "Componente Detectado", desc: "Activo identificado vía escáner", loc: "Por definir", est: "En funcionamiento"
+                };
 
-        function processEvidencePhoto(event) {
+                // Ocultamos el texto de espera y abrimos el formulario de edición adentro del Contenedor 1
+                document.getElementById('scan-placeholder').style.display = 'none';
+                document.getElementById('edit-asset-form').style.display = 'block';
+
+                document.getElementById('view-code').value = activo.id;
+                document.getElementById('view-item').value = activo.item;
+                document.getElementById('view-description').value = activo.desc;
+                document.getElementById('edit-location').value = activo.loc;
+                document.getElementById('edit-status').value = activo.est;
+            }, 500);
+        }
+
+        function handleAssetSubmit(event) {
+            event.preventDefault();
+            
+            const dataToSync = {
+                id: document.getElementById('view-code').value,
+                ubicacion: document.getElementById('edit-location').value,
+                estado: document.getElementById('edit-status').value
+            };
+            
+            console.log("Sincronizando con SharePoint...", dataToSync);
+            alert(`¡Activo ${dataToSync.id} sincronizado y actualizado con éxito en SharePoint!`);
+            
+            // Regresar al estado inicial del Contenedor 1
+            document.getElementById('edit-asset-form').style.display = 'none';
+            const placeholder = document.getElementById('scan-placeholder');
+            placeholder.style.display = 'block';
+            placeholder.innerText = "Presione el botón para escanear un activo y editar sus datos.";
+        }
+
+
+        // --- LÓGICA DEL CONTENEDOR 2: BUSCADOR PREDICTIVO Y FOTO INDEPENDIENTE ---
+        function searchLiveAsset(texto) {
+            const lista = document.getElementById('suggestions-box');
+            lista.innerHTML = ''; 
+
+            if (!texto) {
+                lista.style.display = 'none';
+                return;
+            }
+
+            const coincidencias = listaActivosSharePoint.filter(activo => 
+                activo.id.toLowerCase().includes(texto.toLowerCase())
+            );
+
+            if (coincidencias.length > 0) {
+                lista.style.display = 'block';
+                coincidencias.forEach(activo => {
+                    const li = document.createElement('li');
+                    li.innerText = `${activo.id} — ${activo.item}`;
+                    li.onclick = () => {
+                        document.getElementById('search-asset-id').value = activo.id;
+                        lista.style.display = 'none';
+                    };
+                    lista.appendChild(li);
+                });
+            } else {
+                lista.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.target.id !== 'search-asset-id') {
+                document.getElementById('suggestions-box').style.display = 'none';
+            }
+        });
+
+        function previewPhoto(event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const previewBox = document.getElementById('evidence-preview-box');
-                    const previewImg = document.getElementById('evidence-preview-img');
-                    
-                    previewImg.src = e.target.result;
-                    previewBox.style.display = "block";
-                    
-                    globalBase64Photo = e.target.result; // String listo para SharePoint
+                    document.getElementById('photo-preview-img').src = e.target.result;
+                    document.getElementById('photo-preview-box').style.display = "block";
+                    globalBase64Photo = e.target.result;
                 }
                 reader.readAsDataURL(file);
             }
         }
 
-
-        // --- 4. ENVÍO DE LA FOTO AL ID ASOCIADO ---
         function handlePhotoSubmit(event) {
             event.preventDefault();
+            const targetID = document.getElementById('search-asset-id').value;
+            
+            console.log("Subiendo foto al ID en SharePoint:", targetID);
+            alert(`¡Evidencia fotográfica subida y vinculada al ID: ${targetID} con éxito!`);
 
-            const assetId = document.getElementById('search-asset-id').value;
-
-            const payload = {
-                idActivo: assetId,
-                foto: globalBase64Photo
-            };
-
-            // Aquí se gatilla el fetch hacia tu flujo que inyecta el adjunto al ID en SharePoint
-            console.log("Subiendo evidencia fotográfica...", payload);
-
-            alert(`¡Evidencia enviada con éxito al Activo ID: ${payload.idActivo}!`);
-
-            // Resetear formulario de foto
-            document.getElementById('photo-flow-form').reset();
-            document.getElementById('evidence-preview-box').style.display = "none";
+            document.getElementById('photo-only-form').reset();
+            document.getElementById('photo-preview-box').style.display = "none";
             globalBase64Photo = "";
         }
     </script>
