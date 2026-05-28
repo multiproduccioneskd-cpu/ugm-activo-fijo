@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Inventario - UGM</title>
+    <title>Control de Inventario con Foto - UGM</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         :root {
-            --bg-dark: #172437; /* Fondo oscuro de la app */
+            --bg-dark: #172437; 
             --bg-card: #ffffff;
-            --primary-blue: #1e3d99; /* Azul del encabezado de la segunda imagen */
-            --btn-green: #00a66a;    /* Verde del botón de registro */
+            --primary-blue: #1e3d99; 
+            --btn-green: #00a66a;    
             --btn-blue: #1e3d99;
-            --accent-line: #1e3d99;  /* Barrita lateral azul */
+            --accent-line: #1e3d99;  
             --text-muted: #7f8c8d;
         }
 
@@ -27,10 +27,9 @@
 
         .wrapper {
             width: 100%;
-            max-width: 550px; /* Tamaño compacto tipo móvil */
+            max-width: 550px; 
         }
 
-        /* Encabezado exacto a la segunda imagen */
         .main-header {
             background-color: var(--primary-blue);
             color: white;
@@ -53,7 +52,6 @@
             opacity: 0.9;
         }
 
-        /* Tarjetas blancas redondeadas */
         .card {
             background-color: var(--bg-card);
             border-radius: 16px;
@@ -63,7 +61,6 @@
             box-sizing: border-box;
         }
 
-        /* Títulos con la barrita azul al lado izquierdo (|) */
         .card-title {
             font-size: 1.05rem;
             font-weight: bold;
@@ -84,7 +81,6 @@
             border-radius: 2px;
         }
 
-        /* Botón de Escaneo estilo "Registrar Entrada" */
         .btn-action {
             width: 100%;
             background-color: var(--btn-green);
@@ -102,7 +98,6 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        /* Zona de la cámara */
         #camera-preview {
             width: 100%;
             margin-top: 15px;
@@ -118,7 +113,6 @@
             padding: 10px 0;
         }
 
-        /* Formulario de Datos Escaneados */
         .form-group {
             margin-bottom: 12px;
             display: flex;
@@ -141,10 +135,23 @@
             color: #333;
         }
 
-        /* Resaltar visualmente los campos que sí se pueden editar */
         .form-group.editable input, .form-group.editable select {
             background-color: #ffffff;
             border: 1.5px solid var(--primary-blue);
+        }
+
+        /* --- NUEVOS ESTILOS PARA LA PREVISUALIZACIÓN DE LA FOTO --- */
+        .preview-image-container {
+            margin-top: 8px;
+            display: none;
+            text-align: center;
+        }
+
+        .preview-image-container img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 6px;
+            border: 1px dashed var(--primary-blue);
         }
 
         .btn-submit {
@@ -216,6 +223,15 @@
                     </select>
                 </div>
 
+                <div class="form-group editable">
+                    <label>Evidencia Fotográfica (Opcional) 📸✏️</label>
+                    <input type="file" id="edit-photo" accept="image/*" capture="environment" onchange="previewPhoto(event)">
+                    
+                    <div id="photo-preview-box" class="preview-image-container">
+                        <img id="photo-preview-img" src="" alt="Vista previa del activo">
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-submit">💾 GUARDAR CAMBIOS EN SHAREPOINT</button>
             </form>
         </div>
@@ -225,8 +241,8 @@
     <script>
         let scannerInstance;
         let scanningState = false;
+        let base64PhotoData = ""; // Aquí guardaremos la foto convertida a texto para meterla a SharePoint
 
-        // Función para abrir/cerrar el cajón de la cámara
         function toggleScanner() {
             const previewDiv = document.getElementById('camera-preview');
             const btn = document.getElementById('btn-reader');
@@ -234,12 +250,12 @@
             if (!scanningState) {
                 previewDiv.style.display = 'block';
                 btn.innerText = "🛑 DETENER LECTOR";
-                btn.style.backgroundColor = "#d32f2f"; // Cambia a rojo al estar activo
+                btn.style.backgroundColor = "#d32f2f"; 
                 scanningState = true;
 
                 scannerInstance = new Html5Qrcode("camera-preview");
                 scannerInstance.start(
-                    { facingMode: "environment" }, // Usa la cámara de atrás del celular
+                    { facingMode: "environment" }, 
                     { fps: 10, qrbox: { width: 250, height: 150 } },
                     onScanSuccess
                 ).catch(err => {
@@ -263,17 +279,14 @@
             }
         }
 
-        // Ejecución automática al detectar un código de barras válido
         function onScanSuccess(decodedText) {
             resetScannerUI();
             getSharePointData(decodedText);
         }
 
-        // --- CONEXIÓN DE CONSULTA (Ajustar con tu API/Fetch) ---
         function getSharePointData(codigoEscaneado) {
             document.getElementById('no-data').innerText = "Buscando código: " + codigoEscaneado + "...";
 
-            // Simulación de respuesta de la base de datos de SharePoint
             setTimeout(() => {
                 const respuestaSimuladaSharePoint = {
                     codigo: codigoEscaneado,
@@ -283,39 +296,61 @@
                     estado: "En funcionamiento"
                 };
 
-                // Ocultamos el mensaje vacío y mostramos el formulario con los detalles
                 document.getElementById('no-data').style.display = 'none';
                 document.getElementById('asset-form').style.display = 'block';
 
-                // Rellenamos los cuadros de texto correspondientes
                 document.getElementById('view-code').value = respuestaSimuladaSharePoint.codigo;
                 document.getElementById('view-item').value = respuestaSimuladaSharePoint.item;
                 document.getElementById('view-description').value = respuestaSimuladaSharePoint.descripcion;
                 
-                // Estos quedan listos para editar si el usuario quiere
                 document.getElementById('edit-location').value = respuestaSimuladaSharePoint.ubicacion;
                 document.getElementById('edit-status').value = respuestaSimuladaSharePoint.estado;
 
+                // Limpiar la foto del escaneo anterior
+                document.getElementById('edit-photo').value = "";
+                document.getElementById('photo-preview-box').style.display = "none";
+                base64PhotoData = "";
+
             }, 600);
+        }
+
+        // --- NUEVA FUNCIÓN: PROCESAR Y MOSTRAR LA FOTO TOMADA ---
+        function previewPhoto(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Mostramos la miniatura en la pantalla
+                    const previewBox = document.getElementById('photo-preview-box');
+                    const previewImg = document.getElementById('photo-preview-img');
+                    
+                    previewImg.src = e.target.result;
+                    previewBox.style.display = "block";
+                    
+                    // Guardamos el string Base64 para enviarlo luego
+                    base64PhotoData = e.target.result; 
+                }
+                reader.readAsDataURL(file);
+            }
         }
 
         // --- ENVIAR EDICIÓN A SHAREPOINT ---
         function handleFormSubmit(event) {
             event.preventDefault();
 
-            // Captura los datos modificados del formulario
             const datosAEnviar = {
                 codigo: document.getElementById('view-code').value,
                 ubicacion: document.getElementById('edit-location').value,
-                estado: document.getElementById('edit-status').value
+                estado: document.getElementById('edit-status').value,
+                fotoBase64: base64PhotoData // Aquí va la imagen adjunta (si se tomó una)
             };
 
-            // Aquí ejecutas tu llamado Fetch hacia tu webhook de Power Automate o API
-            console.log("Enviando actualización...", datosAEnviar);
+            // Mandar los datos a tu endpoint/flujo conectado a SharePoint
+            console.log("Enviando actualización con foto...", datosAEnviar);
 
-            alert("¡Cambios registrados! Se actualizó el estado y ubicación en SharePoint.");
+            alert("¡Cambios registrados! Se actualizó el estado, la ubicación y la imagen en SharePoint.");
 
-            // Limpiamos la pantalla volviendo al estado original
+            // Reiniciamos la interfaz
             document.getElementById('asset-form').style.display = 'none';
             const placeholder = document.getElementById('no-data');
             placeholder.style.display = 'block';
